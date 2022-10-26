@@ -90,7 +90,13 @@ tags = counts.most_common(40)
 
 wc = WordCloud(background_color='Black', width=1300, height=650, scale=2.0, max_font_size=250,
                font_path=config['APP']['Font'], colormap='PuBu')
-cloud = wc.generate_from_frequencies(dict(tags))
+
+try:
+    cloud = wc.generate_from_frequencies(dict(tags))
+except OSError:
+    wc = WordCloud(background_color='Black', width=1300, height=650, scale=2.0, max_font_size=250,
+                   colormap='PuBu')
+    cloud = wc.generate_from_frequencies(dict(tags))
 
 fig = plt.figure(figsize=(10, 8))
 plt.axis('off')
