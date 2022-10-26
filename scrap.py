@@ -12,13 +12,20 @@ from selenium import webdriver
 config = configparser.ConfigParser()
 config.read('config.ini')
 
+webdriver_options = webdriver.ChromeOptions()
+webdriver_options.add_argument('--headless')
+webdriver_options.add_argument('--no-sandbox')
+webdriver_options.add_argument('--disable-dev-shm-usage')
+webdriver_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, '
+                               'like Gecko) Chrome/97.0.4692.71 Safari/537.36')
+
 
 def main(database_file):
     # Check Time
     tm = time.localtime(time.time())
     scraping_time = str(tm.tm_mon).zfill(2) + str(tm.tm_mday).zfill(2) + str(tm.tm_hour).zfill(2)
     # Set Driver Config
-    driver = webdriver.Chrome(config['SCRAP']['Driver'])
+    driver = webdriver.Chrome(config['SCRAP']['Driver'], options=webdriver_options)
     driver.implicitly_wait(1)
 
     # Login
@@ -76,7 +83,7 @@ def main(database_file):
         result_df = pd.concat([previous_df, result_df])
         result_df = result_df.drop_duplicates(['keyword', 'content'])
 
-    result_df.to_csv(database_file)
+    result_df.to_csv(database_file, index=False)
 
 
 if __name__ == '__main__':

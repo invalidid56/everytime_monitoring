@@ -1,63 +1,111 @@
+# Junseo Kang, invalidid56@snu.ac.kr
+# Streamlit Main Page
+#
+
 import streamlit as st
+import configparser
 import pandas as pd
-import numpy as np
+from konlpy.tag import Okt
 from gensim.models.word2vec import Word2Vec
-from wordcloud import WordCloud
 from collections import Counter
+from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 
-#
-# Read Data, Parse Data
-#
-with open('keyword.txt', 'r') as kw:
-    keywords = [line.strip() for line in kw.readline().split(',')]
-corpus = pd.read_csv('scrap.csv')
 
-stop_words = '등 것 이 말 명 전 그 고 위 때문 마련 저 라고 수 기자'
-stop_words = stop_words.split(' ')
-
-model = dict()
-cloud = dict()
-
-for kw in keywords:
-    kw_corpus = [line.strip('"').split(',') for line
-                 in corpus[corpus['Keyword'] == kw]['Article'].tolist() if isinstance(line, str)]
-    model[kw] = Word2Vec(kw_corpus, min_count=1, workers=4)
-
-    #
-
-    word_list = sum(kw_corpus, [])
-    counts = Counter(word_list)
-    tags = counts.most_common(40)
-
-    wc = WordCloud(background_color='White', font_path='MaruBuri-Regular.ttf')
-    cloud[kw] = wc.generate_from_frequencies(dict(tags))
-
-#
-# Main Page
-#
-st.title('공명: 에브리타임 여론 청취 대시보드')
-
-
-st.write('키워드별 빅데이터 분석')
-option_kw = st.selectbox(
-    '조회할 키워드를 선택해주세요',
-    pd.Series(keywords)
+# Config
+st.set_page_config(
+    page_title='제 63대 선거운동본부, 공명'
 )
+config = configparser.ConfigParser()
+config.read('config.ini')
 
-st.write('{0} 키워드와 가장 유사한 단어 10개'.format(option_kw))
-st.write(model[option_kw].wv.most_similar(option_kw + ('생회' if option_kw == '총학' else ''), topn=10))
+# Read Data
+database = pd.read_csv('db.csv')
 
+
+# Set Max Width
+def _max_width_():
+    max_width_str = f"max-width: 1400px;"
+    st.markdown(
+        f"""
+    <style>
+    .reportview-container .main .block-container{{
+        {max_width_str}
+    }}
+    </style>    
+    """,
+        unsafe_allow_html=True,
+    )
+
+
+_max_width_()
+
+# Set Title
+st.image('ico.png')
+st.title("제 63대 선거운동본부 공명: 에브리타임 여론 청취 대시보드")
+st.header("")
+
+# Articles Dashboard
+st.write("")
+st.markdown("# Articles Dashboard")
+keyword_to_display = st.selectbox('키워드를 선택하세요', config['APP']['Keywords'].split(','))
+db_to_display = database[database['keyword'] == keyword_to_display].drop(['keyword'], axis=1)
+st.dataframe(db_to_display)
+st.write("")
+
+# Analysis
+st.write("")
+st.markdown("# Analysis Dashboard")
+keyword_to_anal = st.radio('키워드를 선택하세요', config['APP']['Keywords'].split(','))
+db_to_anal = database[database['keyword'] == keyword_to_anal].drop(['keyword'], axis=1)
+target_to_anal = st.radio('분석 대상을 선택하세요', ('Article', 'Comment', 'Both'))
+
+#   0. Pre-Process
+stop_words = config['APP']['Stopwords'].split(',')
+tagger = Okt()
+
+if target_to_anal == 'Article':
+    corpus_articles = db_to_anal[db_to_anal['comment_type'] == 'article']['content'].tolist()
+    corpus = [[word for word in tagger.nouns(line) if word not in stop_words] for line in corpus_articles]
+elif target_to_anal == 'Comment':
+    corpus_comments = db_to_anal[db_to_anal['comment_type'] == 'comment']['content'].tolist()
+    corpus = [[word for word in tagger.nouns(line) if word not in stop_words] for line in corpus_comments]
+else:
+    corpus_both = db_to_anal['content'].tolist()
+    corpus = [[word for word in tagger.nouns(line) if word not in stop_words] for line in corpus_both]
+
+
+#   1. Cos-Sim Analysis
+st.markdown("## 1. Cos-Sim Analysis")
+model = Word2Vec(corpus, min_count=1, workers=4)
+most_similar = model.wv.most_similar(keyword_to_anal, topn=15)
+st.write("{0}와 가장 유사한 단어는 다음과 같습니다".format(keyword_to_anal))
+st.table(pd.DataFrame(most_similar))
+
+#   2. Wordcloud Analysis
+st.markdown("## 2. WordCloud Analysis")
+word_list = sum(corpus, [])
+counts = Counter(word_list)
+tags = counts.most_common(40)
+
+wc = WordCloud(background_color='Black', width=1300, height=650, scale=2.0, max_font_size=250,
+               font_path=config['APP']['Font'], colormap='PuBu')
+cloud = wc.generate_from_frequencies(dict(tags))
 
 fig = plt.figure(figsize=(10, 8))
 plt.axis('off')
-plt.imshow(cloud[option_kw])
-plt.show()
+plt.imshow(cloud)
 
 st.pyplot(fig)
 
+#   3. Time-Series Articles / Comments
+st.markdown("## 3. Time Series Mentions")
+db_to_anal['time'] = db_to_anal['time'].map(int)
+if target_to_anal == 'Article':
+    count_per_time = db_to_anal[db_to_anal['comment_type'] == 'article'].groupby('time')['content'].count()
+elif target_to_anal == 'Comment':
+    count_per_time = db_to_anal[db_to_anal['comment_type'] == 'comment'].groupby('time')['content'].count()
+else:
+    count_per_time = db_to_anal.groupby('time')['content'].count()
 
-
-
-
-
+st.line_chart(count_per_time)
