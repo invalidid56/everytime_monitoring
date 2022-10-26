@@ -41,6 +41,7 @@ def main(database_file):
     keywords = config['SCRAP']['Keywords'].split(',')
 
     for keyword in keywords:
+        print('Scrapping {0}..'.format(keyword))
         for page in range(pages_to_read):
             driver.get('https://everytime.kr/search/all/{0}/p/{1}'.format(
                 keyword,

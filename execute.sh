@@ -1,8 +1,8 @@
 #!/bin/bash
 
 
-while True:
+while true;
 do
   python scrap.py
-  sleept 3600
+  sleep 3600
 done
