@@ -24,6 +24,7 @@ def main(database_file):
     # Check Time
     tm = time.localtime(time.time())
     scraping_time = str(tm.tm_mon).zfill(2) + str(tm.tm_mday).zfill(2) + str(tm.tm_hour).zfill(2)
+    print('Scraping at {0}'.format(time.ctime(time.time())))
     # Set Driver Config
     driver = webdriver.Chrome(config['SCRAP']['Driver'], options=webdriver_options)
     driver.implicitly_wait(1)

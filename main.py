@@ -50,7 +50,7 @@ st.write("")
 st.markdown("# Articles Dashboard")
 keyword_to_display = st.selectbox('키워드를 선택하세요', config['APP']['Keywords'].split(','))
 db_to_display = database[database['keyword'] == keyword_to_display].drop(['keyword'], axis=1)
-st.dataframe(db_to_display)
+st.dataframe(db_to_display.sort_values(by=['time'], ascending=False))
 st.write("")
 
 # Analysis
@@ -108,10 +108,12 @@ st.pyplot(fig)
 st.markdown("## 3. Time Series Mentions")
 db_to_anal['time'] = db_to_anal['time'].map(int)
 if target_to_anal == 'Article':
-    count_per_time = db_to_anal[db_to_anal['comment_type'] == 'article'].groupby('time')['content'].count()
+    count_per_time = db_to_anal[
+        (db_to_anal['comment_type'] == 'article') & (db_to_anal['time'] != 102618)].groupby('time')['content'].count()
 elif target_to_anal == 'Comment':
-    count_per_time = db_to_anal[db_to_anal['comment_type'] == 'comment'].groupby('time')['content'].count()
+    count_per_time = db_to_anal[
+        (db_to_anal['comment_type'] == 'comment') & (db_to_anal['time'] != 102618)].groupby('time')['content'].count()
 else:
-    count_per_time = db_to_anal.groupby('time')['content'].count()
-
+    count_per_time = db_to_anal[db_to_anal['time'] != 102618].groupby('time')['content'].count()
+print(count_per_time)
 st.line_chart(count_per_time)
